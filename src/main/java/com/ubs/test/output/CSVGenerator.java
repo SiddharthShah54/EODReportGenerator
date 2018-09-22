@@ -4,18 +4,22 @@ package com.ubs.test.output;
 import com.ubs.test.objects.EODPosition;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 public class CSVGenerator {
 
-    public static final Logger LOGGER = Logger.getLogger("CSVGenerator");
-    CSVFormat format = CSVFormat.DEFAULT.withHeader("Instrument", "Account", "AccountType", "Quantity","Delta").withDelimiter(',');
+    private static final Logger LOGGER = LogManager.getLogger(CSVGenerator.class);
+
+    private CSVFormat format = CSVFormat.DEFAULT.withHeader("Instrument", "Account", "AccountType", "Quantity","Delta").withDelimiter(',');
 
     /**
      * Generate the CSV file at the desire location. Currently it
@@ -49,14 +53,14 @@ public class CSVGenerator {
         }
         catch(Exception e)
         {
-            LOGGER.log(Level.SEVERE,"Error while saving the EOD file to disk");
+            LOGGER.error("Error while saving the EOD file to disk");
             throw e;
         }
         finally {
             try {
                 printer.close();
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE,"Error while closing the instance of Printer");
+                LOGGER.error("Error while closing the instance of Printer");
             }
         }
 

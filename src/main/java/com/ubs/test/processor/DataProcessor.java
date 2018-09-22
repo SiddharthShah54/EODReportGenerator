@@ -2,14 +2,16 @@ package com.ubs.test.processor;
 
 import com.google.common.collect.Lists;
 import com.ubs.test.objects.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.logging.Logger;
+
 
 public class DataProcessor {
-    public static final Logger LOGGER = Logger.getLogger("DataProcessor");
-    Map<String, ArrayList<SODPosition>> sodPositions;
-    List<Transaction> transactions;
+    private static final Logger LOGGER = LogManager.getLogger(DataProcessor.class);
+    private Map<String, ArrayList<SODPosition>> sodPositions;
+    private List<Transaction> transactions;
 
     public DataProcessor(Map<String, ArrayList<SODPosition>> sodPositions, List<Transaction> transactions) {
         this.sodPositions = sodPositions;
@@ -52,6 +54,9 @@ public class DataProcessor {
      */
     private Map<SODPosition, Integer> updateSODPositions() {
         Map<SODPosition, Integer> sodPositionsWithDelta = new HashMap<>();
+        // This will hold all instruments that have associated transactions
+        // this is neede at the end to carry forward SOD transaction on which
+        // no transactions have come.
         Set<String> instrumentsProcessed = new HashSet<>();
         for (Transaction transaction : transactions) {
             List<SODPosition> positions = sodPositions.get(transaction.getInstrument());
@@ -59,9 +64,11 @@ public class DataProcessor {
             if (TransactionType.B.equals(transaction.getTranscationType())) {
                 for (SODPosition position : positions) {
                     if (AccountType.E.equals(position.getAccountType())) {
+                        LOGGER.debug("Processing Transaction Buy for Account Type E with account ID = " + position.getAccount() + " and instrument = " + position.getInstrument());
                         position.setQuantity(position.getQuantity() + transaction.getQuantity());
                         sodPositionsWithDelta = populateDeltaMap(sodPositionsWithDelta, position, transaction.getQuantity());
                     } else {
+                        LOGGER.debug("Processing Transaction Buy for Account Type I with account ID = " + position.getAccount() + " and instrument = " + position.getInstrument());
                         position.setQuantity(position.getQuantity() - transaction.getQuantity());
                         sodPositionsWithDelta = populateDeltaMap(sodPositionsWithDelta, position, (transaction.getQuantity() * -1));
                     }
@@ -69,9 +76,11 @@ public class DataProcessor {
             } else {
                 for (SODPosition position : positions) {
                     if (AccountType.E.equals(position.getAccountType())) {
+                        LOGGER.debug("Processing Transaction Sell for Account Type E with account ID = " + position.getAccount() + " and instrument = " + position.getInstrument());
                         position.setQuantity(position.getQuantity() - transaction.getQuantity());
                         sodPositionsWithDelta = populateDeltaMap(sodPositionsWithDelta, position, (transaction.getQuantity() * -1));
                     } else {
+                        LOGGER.debug("Processing Transaction Sell for Account Type I with account ID = " + position.getAccount() + " and instrument = " + position.getInstrument());
                         position.setQuantity(position.getQuantity() + transaction.getQuantity());
                         sodPositionsWithDelta = populateDeltaMap(sodPositionsWithDelta, position, transaction.getQuantity());
                     }
@@ -79,6 +88,9 @@ public class DataProcessor {
             }
         }
 
+        /*
+        Populate sodPositions with the positions on which there were no transactions
+         */
         for (Map.Entry<String, ArrayList<SODPosition>> entry : sodPositions.entrySet()) {
             if (!instrumentsProcessed.contains(entry.getKey())) {
                 for (SODPosition value : entry.getValue()) {

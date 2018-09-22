@@ -3,13 +3,13 @@ package com.ubs.test.input;
 import com.google.common.collect.Lists;
 import com.ubs.test.objects.AccountType;
 import com.ubs.test.objects.SODPosition;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  */
 public class InputFileReader {
 
-    private static final Logger LOGGER = Logger.getLogger("InputFileReader");
+    private static final Logger LOGGER = LogManager.getLogger(InputFileReader.class);
 
     private ArrayList<String> instrumentOrder = new ArrayList<>();
 
@@ -34,9 +34,10 @@ public class InputFileReader {
                     .filter(x -> validate(x))
                     .map(m -> new SODPosition(m.get(0), Integer.parseInt(m.get(1)), AccountType.accountTypeMap.get(m.get(2)), Integer.parseInt(m.get(3))))
                     .collect(Collectors.toList());
+            LOGGER.info("Read the file from filepath = " + filePath + " and generated list of SODPosition");
             return createOutputMap(result);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error parsing the file with path = " + filePath);
+            LOGGER.error("Error parsing the file with path = " + filePath);
             throw e;
         }
     }
@@ -55,8 +56,11 @@ public class InputFileReader {
         Map<String, ArrayList<SODPosition>> position = new HashMap<>();
         for (SODPosition value : result) {
             if (position.containsKey(value.getInstrument())) {
+                LOGGER.debug("Added SOD position for account = " + value.getAccount() + " and AccountType = " + value.getAccountType().toString() + " to the existing list");
                 position.get(value.getInstrument()).add(value);
             } else {
+                LOGGER.debug("Add a new entry in the map for instrument " + value.getInstrument());
+                LOGGER.debug("Added SOD position for account = " + value.getAccount() + " and AccountType = " + value.getAccountType().toString());
                 position.put(value.getInstrument(), Lists.newArrayList(value));
                 instrumentOrder.add(value.getInstrument());
             }
@@ -74,11 +78,11 @@ public class InputFileReader {
      */
     public boolean validate(List<String> enteredLine) {
         if (enteredLine.size() != 4) {
-            LOGGER.log(Level.SEVERE, "Line = " + enteredLine.toString() + "does not have 4 values. It should have exactly 4 values ");
+            LOGGER.info("Line = " + enteredLine.toString() + "does not have 4 values. It should have exactly 4 values ");
             return false;
         }
         if (AccountType.accountTypeMap.get(enteredLine.get(2)) == null) {
-            LOGGER.log(Level.SEVERE, "Account Type = " + enteredLine.get(2) + " It should be either E or I for entereed line " + enteredLine.toString());
+            LOGGER.info("Account Type = " + enteredLine.get(2) + " It should be either E or I for entereed line " + enteredLine.toString());
             return false;
         }
         return true;
